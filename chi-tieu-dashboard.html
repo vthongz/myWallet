@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ví Chi Tiêu</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#fff5f5; --surface:#fff; --surface2:#fff0f0; --border:#ffd6d6;
+  --text:#3d1f1f; --muted:#b07070;
+  --c1:#ff9999; --c2:#ffb347; --c3:#f78fb3; --c4:#c77dff; --c5:#74b9ff;
+  --green:#34c98b; --green-bg:#f0fdf8; --green-border:#a7f3d0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 20px;position:relative;z-index:1}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--c1),#ffb3b3);display:flex;align-items:center;justify-content:center;font-size:22px}
+h1{font-size:22px;font-weight:800;letter-spacing:-.5px}
+h1 span{color:var(--c1)}
+/* PERIOD TOGGLE */
+.period-wrap{display:flex;align-items:center;gap:10px}
+.period-toggle{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:3px}
+.period-btn{padding:6px 16px;border-radius:8px;border:none;background:transparent;font-family:'Be Vietnam Pro',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .2s}
+.period-btn.active{background:#fff;color:var(--text);box-shadow:0 2px 6px rgba(255,153,153,.2)}
+.month-row{display:flex;align-items:center;gap:8px}
+.month-row label{font-size:12px;color:var(--muted);font-weight:600}
+#monthFilter{padding:8px 12px;font-size:13px;border-radius:10px;width:160px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Be Vietnam Pro',sans-serif;outline:none}
+/* WEEK NAV */
+.week-nav{display:none;align-items:center;gap:6px}
+.week-nav.show{display:flex}
+.week-arrow{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--text);flex-shrink:0}
+.week-arrow:hover{border-color:var(--c1);color:var(--c1)}
+.week-label{font-size:12px;font-weight:700;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;white-space:nowrap;min-width:180px;text-align:center}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(255,153,153,.1);animation:fadeUp .5s ease both}
+.stat-card:nth-child(2){animation-delay:.06s}.stat-card:nth-child(3){animation-delay:.12s}
+.stat-card:nth-child(4){animation-delay:.18s}.stat-card:nth-child(5){animation-delay:.24s}
+.stat-card::after{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;opacity:.1}
+.stat-card.s-income{background:var(--green-bg);border-color:var(--green-border)}.stat-card.s-income::after{background:var(--green)}
+.stat-card.s-expense::after{background:var(--c1)}.stat-card.s-balance::after{background:var(--c4)}
+.stat-card.s-count::after{background:var(--c2)}.stat-card.s-avg::after{background:var(--c3)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;font-weight:700}
+.stat-value{font-size:17px;font-weight:800;font-family:'Space Mono',monospace;letter-spacing:-.5px}
+.stat-card.s-income .stat-value{color:var(--green)}.stat-card.s-expense .stat-value{color:var(--c1)}
+.stat-card.s-count .stat-value{color:var(--c2)}.stat-card.s-avg .stat-value{color:var(--c3)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.pos{color:var(--green)!important}.neg{color:var(--c1)!important}
+
+/* TAB */
+.tab-row{margin-bottom:12px}
+.tab-toggle{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:4px}
+.tab-btn{padding:9px 22px;border-radius:9px;border:none;background:transparent;font-family:'Be Vietnam Pro',sans-serif;font-size:14px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .2s}
+.tab-btn.exp-active{background:#fff0f0;color:var(--c1);box-shadow:0 2px 8px rgba(255,153,153,.2)}
+.tab-btn.inc-active{background:var(--green-bg);color:var(--green);box-shadow:0 2px 8px rgba(52,201,139,.2)}
+
+/* GRID */
+.main-grid{display:grid;grid-template-columns:340px 1fr;gap:20px;margin-bottom:20px}
+
+/* FORM */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;box-shadow:0 4px 24px rgba(255,153,153,.1);transition:border-color .3s,box-shadow .3s;animation:fadeUp .5s .2s ease both}
+.form-card.inc-mode{border-color:var(--green-border);box-shadow:0 4px 24px rgba(52,201,139,.12)}
+.card-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:20px}
+.form-group{margin-bottom:16px}
+.form-group label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;font-weight:600;letter-spacing:.5px}
+.form-group input,.form-group select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-family:'Be Vietnam Pro',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--c1)}
+.inc-mode .form-group input:focus,.inc-mode .form-group select:focus{border-color:var(--green)}
+select option{background:#fff}
+.date-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.date-row select{padding:11px 6px;font-size:13px;text-overflow:ellipsis}
+
+/* CAT / SRC BUTTONS */
+.cat-grid,.src-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cat-btn,.src-btn{padding:10px 8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px;font-family:'Be Vietnam Pro',sans-serif}
+.cat-btn span,.src-btn span{font-size:18px}
+.cat-btn:last-child{grid-column:span 2}
+.src-btn:last-child:nth-child(odd){grid-column:span 2}
+.cat-btn.active{border-color:currentColor}
+.cat-btn[data-cat="0"].active{color:var(--c1);background:rgba(255,153,153,.15)}
+.cat-btn[data-cat="1"].active{color:var(--c2);background:rgba(255,179,71,.15)}
+.cat-btn[data-cat="2"].active{color:var(--c3);background:rgba(247,143,179,.15)}
+.cat-btn[data-cat="3"].active{color:var(--c4);background:rgba(199,125,255,.15)}
+.cat-btn[data-cat="4"].active{color:var(--c5);background:rgba(116,185,255,.15)}
+.src-btn.active{border-color:var(--green);color:var(--green);background:rgba(52,201,139,.12)}
+
+/* SUBMIT */
+.btn-submit{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--c1),#ffb3b3);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:all .3s;margin-top:8px;font-family:'Be Vietnam Pro',sans-serif}
+.btn-submit.inc{background:linear-gradient(135deg,#34c98b,#5ee6a8)}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,153,153,.45)}
+.btn-submit.inc:hover{box-shadow:0 8px 24px rgba(52,201,139,.4)}
+.btn-submit:active{transform:translateY(0)}
+
+/* CHARTS */
+.charts-col{display:flex;flex-direction:column;gap:20px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 4px 24px rgba(255,153,153,.1);animation:fadeUp .5s .28s ease both}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.chart-title{font-size:15px;font-weight:700}
+.chart-badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--surface2);color:var(--muted)}
+.pie-wrap{display:flex;align-items:center;gap:24px}
+.pie-canvas{width:180px!important;height:180px!important;flex-shrink:0}
+.legend{flex:1;display:flex;flex-direction:column;gap:10px}
+.legend-item{display:flex;align-items:center;gap:10px}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-name{font-size:12px;flex:1}
+.legend-pct{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted)}
+
+/* TXN */
+.txn-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 4px 24px rgba(255,153,153,.1);animation:fadeUp .5s .35s ease both}
+.txn-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+.txn-title{font-size:15px;font-weight:700}
+.filter-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:all .2s;font-weight:600}
+.filter-btn.active{background:var(--surface2);color:var(--text);border-color:var(--text)}
+.filter-btn.fi.active{background:rgba(52,201,139,.1);color:var(--green);border-color:var(--green)}
+.filter-btn.fe.active{background:rgba(255,153,153,.1);color:var(--c1);border-color:var(--c1)}
+.btn-clear{font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:all .2s}
+.btn-clear:hover{border-color:var(--c1);color:var(--c1)}
+.txn-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto}
+.txn-list::-webkit-scrollbar{width:4px}
+.txn-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.txn-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--surface2);animation:fadeIn .3s ease}
+.txn-item.inc{background:#f0fdf8}
+.txn-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.txn-info{flex:1;min-width:0}
+.txn-desc{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txn-meta{font-size:12px;margin-top:2px;font-weight:500}
+.txn-amount{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;white-space:nowrap}
+.txn-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 6px;border-radius:6px;transition:all .2s;flex-shrink:0;line-height:1}
+.txn-del:hover{color:var(--c1);background:rgba(255,107,107,.1)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;z-index:999;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;display:flex;align-items:center;gap:10px;transform:translateY(100px);opacity:0;transition:all .3s;box-shadow:0 8px 32px rgba(255,153,153,.25);color:var(--text)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-icon{font-size:18px}
+
+/* NAME MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(61,31,31,.35);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .25s ease}
+.modal-box{background:#fff;border-radius:24px;padding:40px 36px;width:340px;box-shadow:0 20px 60px rgba(255,153,153,.25);text-align:center;animation:fadeUp .3s ease}
+.modal-icon{font-size:48px;margin-bottom:16px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:6px;color:var(--text)}
+.modal-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+.modal-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-family:'Be Vietnam Pro',sans-serif;font-size:15px;outline:none;transition:border-color .2s;text-align:center;font-weight:600}
+.modal-input:focus{border-color:var(--c1)}
+.modal-btn{width:100%;margin-top:14px;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--c1),#ffb3b3);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;transition:all .2s}
+.modal-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,153,153,.4)}
+
+/* USER CHIP in header */
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:40px;padding:7px 14px 7px 10px;cursor:pointer;transition:all .2s}
+.user-chip:hover{border-color:var(--c1)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--c1),#ffb3b3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.user-name{font-size:13px;font-weight:700;color:var(--text)}
+.user-edit{font-size:11px;color:var(--muted)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+@media(max-width:960px){.main-grid{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">💸</div>
+      <div>
+        <h1>Ví <span>Chi Tiêu</span></h1>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="headerGreet"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="user-chip" id="userChip">
+        <div class="user-avatar">👤</div>
+        <div>
+          <div class="user-name" id="userName">Chưa đặt tên</div>
+          <div class="user-edit">Nhấn để đổi tên</div>
+        </div>
+      </div>
+      <div class="period-wrap">
+        <div class="period-toggle">
+          <button class="period-btn active" id="btnPeriodMonth">Tháng</button>
+          <button class="period-btn" id="btnPeriodWeek">Tuần</button>
+        </div>
+        <div class="month-row" id="monthWrap">
+          <label for="monthFilter">Tháng:</label>
+          <input type="month" id="monthFilter">
+        </div>
+        <div class="week-nav" id="weekNav">
+          <button class="week-arrow" id="btnWeekPrev">‹</button>
+          <div class="week-label" id="weekLabel">Tuần này</div>
+          <button class="week-arrow" id="btnWeekNext">›</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAME MODAL -->
+  <div class="modal-overlay" id="nameModal">
+    <div class="modal-box">
+      <div class="modal-icon">👋</div>
+      <div class="modal-title">Xin chào!</div>
+      <div class="modal-sub">Nhập tên của bạn để cá nhân hóa dashboard</div>
+      <input class="modal-input" id="nameInput" type="text" placeholder="Tên của bạn..." maxlength="30">
+      <button class="modal-btn" id="nameSaveBtn">Bắt đầu →</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card s-income">
+      <div class="stat-label">💚 Thu nhập</div>
+      <div class="stat-value" id="sIncome">0₫</div>
+      <div class="stat-sub" id="sIncomeN">0 khoản</div>
+    </div>
+    <div class="stat-card s-expense">
+      <div class="stat-label">🔴 Chi tiêu</div>
+      <div class="stat-value" id="sExpense">0₫</div>
+      <div class="stat-sub" id="sExpenseN">0 khoản</div>
+    </div>
+    <div class="stat-card s-balance">
+      <div class="stat-label">⚖️ Số dư</div>
+      <div class="stat-value" id="sBalance">0₫</div>
+      <div class="stat-sub" id="sBalanceSub">Tháng này</div>
+    </div>
+    <div class="stat-card s-count">
+      <div class="stat-label">📊 Giao dịch</div>
+      <div class="stat-value" id="sCount">0</div>
+      <div class="stat-sub">Tổng tất cả</div>
+    </div>
+    <div class="stat-card s-avg">
+      <div class="stat-label">📉 TB / chi tiêu</div>
+      <div class="stat-value" id="sAvg">0₫</div>
+      <div class="stat-sub">Mỗi khoản chi</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div>
+      <div class="tab-row">
+        <div class="tab-toggle">
+          <button class="tab-btn exp-active" id="tabExp">💸 Chi tiêu</button>
+          <button class="tab-btn" id="tabInc">💰 Thu nhập</button>
+        </div>
+      </div>
+
+      <div class="form-card" id="formCard">
+        <div class="card-title" id="formTitle">➕ Thêm chi tiêu</div>
+
+        <div id="expFields">
+          <div class="form-group">
+            <label>DANH MỤC</label>
+            <div class="cat-grid">
+              <button class="cat-btn active" data-cat="0"><span>🍜</span>Ăn uống</button>
+              <button class="cat-btn" data-cat="1"><span>🚗</span>Di chuyển</button>
+              <button class="cat-btn" data-cat="2"><span>🛍️</span>Đồ dùng</button>
+              <button class="cat-btn" data-cat="3"><span>🎮</span>Giải trí & dịch vụ</button>
+              <button class="cat-btn" data-cat="4"><span>📦</span>KHÁC</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="incFields" style="display:none">
+          <div class="form-group">
+            <label>NGUỒN THU NHẬP</label>
+            <div class="src-grid">
+              <button class="src-btn active" data-src="0"><span>💼</span>Lương</button>
+              <button class="src-btn" data-src="1"><span>🎁</span>Thưởng</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>MÔ TẢ</label>
+          <input type="text" id="desc" placeholder="VD: Bún bò, Grab, Shopee..." maxlength="60">
+        </div>
+        <div class="form-group">
+          <label>SỐ TIỀN (VND)</label>
+          <input type="number" id="amount" placeholder="VD: 50000" min="0" step="1000">
+        </div>
+        <div class="form-group">
+          <label>NGÀY</label>
+          <div class="date-row">
+            <select id="dd"></select>
+            <select id="mm"></select>
+            <select id="yy"></select>
+          </div>
+          <div id="dowDisplay" style="margin-top:7px;font-size:12px;font-weight:700;color:var(--c1);display:flex;align-items:center;gap:5px">
+            <span>📅</span><span id="dowText"></span>
+          </div>
+        </div>
+        <button class="btn-submit" id="btnSubmit">Thêm Khoản Chi</button>
+      </div>
+    </div>
+
+    <div class="charts-col">
+      <div class="txn-card">
+        <div class="txn-header">
+          <div class="txn-title">📋 Lịch sử giao dịch</div>
+          <div class="filter-row">
+            <button class="filter-btn active" id="fAll">Tất cả</button>
+            <button class="filter-btn fi" id="fInc">💰 Thu nhập</button>
+            <button class="filter-btn fe" id="fExp">💸 Chi tiêu</button>
+            <button class="btn-clear" id="btnClear">🗑 Xóa kỳ này</button>
+          </div>
+        </div>
+        <div class="txn-list" id="txnList"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Phân bổ chi tiêu</div>
+          <div class="chart-badge">Biểu đồ tròn</div>
+        </div>
+        <div class="pie-wrap">
+          <canvas id="pieChart" class="pie-canvas"></canvas>
+          <div class="legend" id="pieLegend"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Chi tiêu theo danh mục</div>
+          <div class="chart-badge">Biểu đồ cột</div>
+        </div>
+        <canvas id="barChart" style="max-height:200px"></canvas>
+      </div>
+    </div>
+  </div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon"></span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+(function() {
+
+// ── DATA ────────────────────────────────────────────────────────
+const CATS = [
+  { name:'Ăn uống', icon:'🍜', color:'#ff9999' },
+  { name:'Di chuyển',icon:'🚗', color:'#ffb347' },
+  { name:'Đồ dùng',           icon:'🛍️', color:'#f78fb3' },
+  { name:'Giải trí & dịch vụ',icon:'🎮', color:'#c77dff' },
+  { name:'KHÁC',              icon:'📦', color:'#74b9ff' },
+];
+const SRCS = [
+  { name:'Lương', icon:'💼', color:'#34c98b' },
+  { name:'Thưởng', icon:'🎁', color:'#0ca678' },
+];
+
+// ── STATE ───────────────────────────────────────────────────────
+let mode      = 'expense';
+let selCat    = 0;
+let selSrc    = 0;
+let filter    = 'all';
+let pieChart  = null;
+let barChart  = null;
+let viewPeriod = 'month';   // 'month' | 'week'
+let weekStart  = getMonday(new Date()); // Monday of current week
+const mem     = {};
+
+// ── WEEK HELPERS ─────────────────────────────────────────────────
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay(); // 0=Sun
+  const diff = (day === 0) ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+function addDays(d, n) {
+  const dt = new Date(d);
+  dt.setDate(dt.getDate() + n);
+  return dt;
+}
+function fmtDate(d) {
+  return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+}
+function getDOW(dateStr) {
+  // dateStr: 'YYYY-MM-DD'
+  const days = ['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  const d = new Date(dateStr + 'T00:00:00');
+  return days[d.getDay()];
+}
+function toYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function getWeekNumber(d) {
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+}
+function updateWeekLabel() {
+  const end = addDays(weekStart, 6);
+  const wn  = getWeekNumber(weekStart);
+  document.getElementById('weekLabel').textContent =
+    'Tuần ' + wn + ' · ' + fmtDate(weekStart) + ' – ' + fmtDate(end) + '/' + end.getFullYear();
+}
+
+// ── STORAGE ─────────────────────────────────────────────────────
+function monthKey(ym) { return 'vt_' + ym; }
+function curMonthYM() { return document.getElementById('monthFilter').value; }
+
+// Load ALL data for a given YYYY-MM
+function loadMonth(ym) {
+  const k = monthKey(ym);
+  if (mem[k]) return JSON.parse(mem[k]);
+  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : []; }
+  catch(e) { return []; }
+}
+function saveMonth(ym, data) {
+  const k = monthKey(ym);
+  const v = JSON.stringify(data);
+  mem[k] = v;
+  try { localStorage.setItem(k, v); } catch(e) {}
+}
+
+// Get data for the current view period (month or week)
+function getPeriodData() {
+  if (viewPeriod === 'month') {
+    return loadMonth(curMonthYM());
+  } else {
+    // Week can span two months — load both if needed
+    const end = addDays(weekStart, 6);
+    const startYM = weekStart.getFullYear() + '-' + String(weekStart.getMonth()+1).padStart(2,'0');
+    const endYM   = end.getFullYear()       + '-' + String(end.getMonth()+1).padStart(2,'0');
+    let data = loadMonth(startYM);
+    if (startYM !== endYM) data = data.concat(loadMonth(endYM));
+    const from = toYMD(weekStart);
+    const to   = toYMD(end);
+    return data.filter(t => t.date >= from && t.date <= to);
+  }
+}
+
+// Alias dùng trong render/setFilter
+function load() { return getPeriodData(); }
+
+// ── SWITCH PERIOD (month ↔ week) ─────────────────────────────────
+function switchPeriod(p) {
+  viewPeriod = p;
+  document.getElementById('btnPeriodMonth').className = 'period-btn' + (p === 'month' ? ' active' : '');
+  document.getElementById('btnPeriodWeek').className  = 'period-btn' + (p === 'week'  ? ' active' : '');
+  document.getElementById('monthWrap').style.display  = p === 'month' ? 'flex' : 'none';
+  document.getElementById('weekNav').classList.toggle('show', p === 'week');
+  if (p === 'week') updateWeekLabel();
+  render();
+}
+
+// Save a new transaction (always saved to its month)
+function saveTransaction(t) {
+  const ym = t.date.slice(0,7);
+  const data = loadMonth(ym);
+  data.unshift(t);
+  saveMonth(ym, data);
+}
+
+// Delete a transaction by id (search across visible period's months)
+function deleteById(id) {
+  if (viewPeriod === 'month') {
+    const ym   = curMonthYM();
+    const data = loadMonth(ym).filter(t => t.id !== id);
+    saveMonth(ym, data);
+  } else {
+    const end     = addDays(weekStart, 6);
+    const startYM = weekStart.getFullYear() + '-' + String(weekStart.getMonth()+1).padStart(2,'0');
+    const endYM   = end.getFullYear()       + '-' + String(end.getMonth()+1).padStart(2,'0');
+    [startYM, endYM].forEach(function(ym) {
+      const data = loadMonth(ym).filter(t => t.id !== id);
+      saveMonth(ym, data);
+    });
+  }
+}
+
+// Clear all data in current period
+function clearPeriod() {
+  if (viewPeriod === 'month') {
+    const ym = curMonthYM();
+    mem[monthKey(ym)] = '[]';
+    try { localStorage.removeItem(monthKey(ym)); } catch(e) {}
+  } else {
+    const end     = addDays(weekStart, 6);
+    const startYM = weekStart.getFullYear() + '-' + String(weekStart.getMonth()+1).padStart(2,'0');
+    const endYM   = end.getFullYear()       + '-' + String(end.getMonth()+1).padStart(2,'0');
+    const from    = toYMD(weekStart);
+    const to      = toYMD(end);
+    [startYM, endYM].forEach(function(ym) {
+      const kept = loadMonth(ym).filter(t => !(t.date >= from && t.date <= to));
+      saveMonth(ym, kept);
+    });
+  }
+}
+
+// ── FORMAT ───────────────────────────────────────────────────────
+function fmtS(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'') + 'M₫';
+  if (n >= 1e3) return Math.round(n/1e3) + 'K₫';
+  return n + '₫';
+}
+function fmtL(n) { return n.toLocaleString('vi-VN') + '₫'; }
+
+// ── DATE SELECTS ─────────────────────────────────────────────────
+const today = new Date();
+(function initDate() {
+  const D = document.getElementById('dd');
+  const M = document.getElementById('mm');
+  const Y = document.getElementById('yy');
+  for (let d = 1; d <= 31; d++) {
+    const o = new Option('Ngày ' + String(d).padStart(2,'0'), String(d).padStart(2,'0'));
+    D.add(o);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const o = new Option('Tháng ' + String(m).padStart(2,'0'), String(m).padStart(2,'0'));
+    M.add(o);
+  }
+  const cy = today.getFullYear();
+  for (let y = cy; y >= cy - 2; y--) {
+    const o = new Option('Năm ' + y, y);
+    Y.add(o);
+  }
+  D.value = String(today.getDate()).padStart(2,'0');
+  M.value = String(today.getMonth() + 1).padStart(2,'0');
+  Y.value = cy;
+})();
+
+function updateDOW() {
+  const dateStr = document.getElementById('yy').value + '-' +
+                  document.getElementById('mm').value + '-' +
+                  document.getElementById('dd').value;
+  document.getElementById('dowText').textContent = getDOW(dateStr);
+}
+
+// Update DOW when any date select changes
+['dd','mm','yy'].forEach(function(id) {
+  document.getElementById(id).addEventListener('change', updateDOW);
+});
+
+document.getElementById('monthFilter').value = today.toISOString().slice(0, 7);
+
+function getDate() {
+  return document.getElementById('yy').value + '-' +
+         document.getElementById('mm').value + '-' +
+         document.getElementById('dd').value;
+}
+
+// ── SWITCH MODE ──────────────────────────────────────────────────
+function switchMode(m) {
+  mode = m;
+  const isInc = m === 'income';
+  document.getElementById('tabExp').className  = 'tab-btn' + (!isInc ? ' exp-active' : '');
+  document.getElementById('tabInc').className  = 'tab-btn' + ( isInc ? ' inc-active' : '');
+  document.getElementById('formCard').classList.toggle('inc-mode', isInc);
+  document.getElementById('expFields').style.display = isInc ? 'none'  : 'block';
+  document.getElementById('incFields').style.display = isInc ? 'block' : 'none';
+  document.getElementById('btnSubmit').textContent    = isInc ? 'Thêm Thu Nhập'  : 'Thêm Khoản Chi';
+  document.getElementById('btnSubmit').className      = 'btn-submit' + (isInc ? ' inc' : '');
+  document.getElementById('formTitle').textContent    = isInc ? '💰 Thêm thu nhập' : '➕ Thêm chi tiêu';
+  document.getElementById('desc').placeholder         = isInc ? 'VD: Lương tháng 2, tiền thưởng...' : 'VD: Bún bò, Grab, Shopee...';
+}
+
+// ── SET FILTER ───────────────────────────────────────────────────
+function setFilter(f) {
+  filter = f;
+  document.getElementById('fAll').className = 'filter-btn' + (f === 'all'     ? ' active' : '');
+  document.getElementById('fInc').className = 'filter-btn fi' + (f === 'income'  ? ' active' : '');
+  document.getElementById('fExp').className = 'filter-btn fe' + (f === 'expense' ? ' active' : '');
+  renderList(load());
+}
+
+// ── ADD TRANSACTION ──────────────────────────────────────────────
+function addTransaction() {
+  const desc   = document.getElementById('desc').value.trim();
+  const amount = parseInt(document.getElementById('amount').value, 10);
+  const date   = getDate();
+  if (!desc)               { toast('⚠️', 'Vui lòng nhập mô tả!');           return; }
+  if (!amount || amount <= 0) { toast('⚠️', 'Vui lòng nhập số tiền hợp lệ!'); return; }
+
+  // If month view and date is different month, switch filter
+  if (viewPeriod === 'month') {
+    const curMonth = document.getElementById('monthFilter').value;
+    if (!date.startsWith(curMonth)) document.getElementById('monthFilter').value = date.slice(0,7);
+  }
+
+  const txn = { id: Date.now(), date };
+  if (mode === 'income') {
+    Object.assign(txn, { type:'income',  src:selSrc, desc, amount });
+    toast('💰', 'Thu nhập: +' + fmtL(amount));
+  } else {
+    Object.assign(txn, { type:'expense', cat:selCat, desc, amount });
+    toast('✅', 'Đã thêm: -' + fmtL(amount));
+  }
+  saveTransaction(txn);
+  document.getElementById('desc').value   = '';
+  document.getElementById('amount').value = '';
+  render();
+}
+
+// ── DELETE ───────────────────────────────────────────────────────
+function deleteTransaction(id) {
+  deleteById(id);
+  render();
+  toast('🗑️', 'Đã xóa giao dịch');
+}
+
+// ── CLEAR ALL ────────────────────────────────────────────────────
+function clearAll() {
+  const label = viewPeriod === 'week' ? 'tuần này' : 'tháng này';
+  if (!confirm('Xóa tất cả giao dịch ' + label + '?')) return;
+  clearPeriod();
+  render();
+  toast('🗑️', 'Đã xóa tất cả');
+}
+
+// ── RENDER ───────────────────────────────────────────────────────
+function render() {
+  const data = load();
+
+  // Period label for stat subtitle
+  let periodLabel;
+  if (viewPeriod === 'week') {
+    const end = addDays(weekStart, 6);
+    periodLabel = 'Tuần ' + getWeekNumber(weekStart) + ' · ' + fmtDate(weekStart) + '–' + fmtDate(end);
+  } else {
+    const mf = document.getElementById('monthFilter').value;
+    const [yr, mo] = mf.split('-');
+    periodLabel = 'Tháng ' + mo + '/' + yr;
+  }
+
+  const expenses = data.filter(t => t.type === 'expense' || !t.type);
+  const incomes  = data.filter(t => t.type === 'income');
+  const totE = expenses.reduce((s, t) => s + t.amount, 0);
+  const totI = incomes.reduce((s,  t) => s + t.amount, 0);
+  const bal  = totI - totE;
+
+  document.getElementById('sIncome').textContent   = fmtL(totI);
+  document.getElementById('sIncomeN').textContent  = incomes.length + ' khoản';
+  document.getElementById('sExpense').textContent  = fmtL(totE);
+  document.getElementById('sExpenseN').textContent = expenses.length + ' khoản';
+  document.getElementById('sCount').textContent    = data.length;
+  document.getElementById('sAvg').textContent      = expenses.length ? fmtL(Math.round(totE / expenses.length)) : '0₫';
+
+  const balEl = document.getElementById('sBalance');
+  balEl.textContent = (bal >= 0 ? '+' : '') + fmtL(bal);
+  balEl.className   = 'stat-value ' + (bal >= 0 ? 'pos' : 'neg');
+  document.getElementById('sBalanceSub').textContent = periodLabel;
+
+  // Pie chart
+  const catTotals = CATS.map((_, i) => expenses.filter(t => t.cat === i).reduce((s, t) => s + t.amount, 0));
+  const pieData = {
+    labels: CATS.map(c => c.name),
+    datasets: [{ data: catTotals, backgroundColor: CATS.map(c => c.color), borderColor: '#fff', borderWidth: 2 }]
+  };
+  if (pieChart) { pieChart.data = pieData; pieChart.update(); }
+  else {
+    pieChart = new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: pieData,
+      options: {
+        cutout: '65%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + fmtL(ctx.raw) + ' (' + (totE ? (ctx.raw/totE*100).toFixed(1) : 0) + '%)' } }
+        },
+        animation: { duration: 600 }
+      }
+    });
+  }
+
+  document.getElementById('pieLegend').innerHTML = CATS.map((c, i) => {
+    const pct = totE ? (catTotals[i] / totE * 100).toFixed(1) : 0;
+    return '<div class="legend-item">'
+      + '<div class="legend-dot" style="background:' + c.color + '"></div>'
+      + '<div class="legend-name">' + c.icon + ' ' + c.name + '</div>'
+      + '<div class="legend-pct">' + pct + '%</div>'
+      + '</div>';
+  }).join('');
+
+  // Bar chart
+  const barLabels = CATS.map(c => c.icon + ' ' + c.name);
+  const barData = {
+    labels: barLabels,
+    datasets: [
+      { label: 'Chi tiêu', data: catTotals, backgroundColor: CATS.map(c => c.color + 'bb'), borderColor: CATS.map(c => c.color), borderWidth: 2, borderRadius: 6, borderSkipped: false }
+    ]
+  };
+  if (barChart) { barChart.data = barData; barChart.update(); }
+  else {
+    barChart = new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: barData,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + fmtL(ctx.raw) } }
+        },
+        scales: {
+          x: { grid: { color: '#ffd6d6' }, ticks: { color: '#b07070', font: { family: 'Be Vietnam Pro', size: 11 }, maxRotation: 30, minRotation: 30 } },
+          y: { grid: { color: '#ffd6d6' }, ticks: { color: '#b07070', font: { family: 'Space Mono', size: 10 }, callback: v => fmtS(v) } }
+        },
+        animation: { duration: 500 }
+      }
+    });
+  }
+
+  renderList(data);
+}
+
+function renderList(data) {
+  const list = document.getElementById('txnList');
+  let rows = data;
+  if (filter === 'income')  rows = data.filter(t => t.type === 'income');
+  if (filter === 'expense') rows = data.filter(t => t.type === 'expense' || !t.type);
+
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🪙</div><p>Chưa có giao dịch nào.<br>Hãy thêm khoản đầu tiên!</p></div>';
+    return;
+  }
+
+  list.innerHTML = rows.map(t => {
+    const isInc = t.type === 'income';
+    const meta  = isInc ? SRCS[t.src != null ? t.src : 0] : CATS[t.cat != null ? t.cat : 0];
+    const d     = new Date(t.date);
+    const ds    = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    const dow   = getDOW(t.date);
+    const ac    = isInc ? '#34c98b' : meta.color;
+    const amt   = isInc ? '+' + fmtL(t.amount) : '-' + fmtL(t.amount);
+    const badge = isInc ? '<span style="font-size:10px;background:rgba(52,201,139,.18);color:#34c98b;padding:1px 7px;border-radius:10px;font-weight:700;margin-left:5px">THU</span>' : '';
+    return '<div class="txn-item' + (isInc ? ' inc' : '') + '">'
+      + '<div class="txn-icon" style="background:' + ac + '22;color:' + ac + '">' + meta.icon + '</div>'
+      + '<div class="txn-info">'
+      +   '<div class="txn-desc">' + t.desc + badge + '</div>'
+      +   '<div class="txn-meta" style="color:' + ac + 'dd">' + meta.name + ' · ' + dow + ', ' + ds + '</div>'
+      + '</div>'
+      + '<div class="txn-amount" style="color:' + ac + '">' + amt + '</div>'
+      + '<button class="txn-del" data-id="' + t.id + '" title="Xóa">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+// ── TOAST ────────────────────────────────────────────────────────
+function toast(icon, msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent  = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── WIRE UP ALL EVENTS ───────────────────────────────────────────
+document.getElementById('monthFilter').addEventListener('change', render);
+
+document.getElementById('btnPeriodMonth').addEventListener('click', function() { switchPeriod('month'); });
+document.getElementById('btnPeriodWeek').addEventListener('click',  function() { switchPeriod('week'); });
+document.getElementById('btnWeekPrev').addEventListener('click', function() {
+  weekStart = addDays(weekStart, -7);
+  updateWeekLabel();
+  render();
+});
+document.getElementById('btnWeekNext').addEventListener('click', function() {
+  weekStart = addDays(weekStart, 7);
+  updateWeekLabel();
+  render();
+});
+
+document.getElementById('tabExp').addEventListener('click', function() { switchMode('expense'); });
+document.getElementById('tabInc').addEventListener('click', function() { switchMode('income'); });
+
+document.getElementById('btnSubmit').addEventListener('click', addTransaction);
+
+document.getElementById('fAll').addEventListener('click', function() { setFilter('all'); });
+document.getElementById('fInc').addEventListener('click', function() { setFilter('income'); });
+document.getElementById('fExp').addEventListener('click', function() { setFilter('expense'); });
+document.getElementById('btnClear').addEventListener('click', clearAll);
+
+document.querySelectorAll('.cat-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.cat-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selCat = parseInt(btn.getAttribute('data-cat'), 10);
+  });
+});
+
+document.querySelectorAll('.src-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.src-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selSrc = parseInt(btn.getAttribute('data-src'), 10);
+  });
+});
+
+document.getElementById('txnList').addEventListener('click', function(e) {
+  const btn = e.target.closest('.txn-del');
+  if (btn) deleteTransaction(Number(btn.getAttribute('data-id')));
+});
+
+// ── USERNAME ─────────────────────────────────────────────────────
+let userName = '';
+
+function loadName() {
+  try { return localStorage.getItem('vt_username') || mem['vt_username'] || ''; }
+  catch(e) { return mem['vt_username'] || ''; }
+}
+function saveName(n) {
+  mem['vt_username'] = n;
+  try { localStorage.setItem('vt_username', n); } catch(e) {}
+}
+function applyName(n) {
+  userName = n;
+  document.getElementById('userName').textContent = n || 'Chưa đặt tên';
+  const greet = document.getElementById('headerGreet');
+  const h = new Date().getHours();
+  const time = h < 12 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  greet.textContent = n ? time + ', ' + n + '! 👋' : '';
+}
+function openNameModal() {
+  document.getElementById('nameModal').style.display = 'flex';
+  document.getElementById('nameInput').value = userName;
+  setTimeout(function() { document.getElementById('nameInput').focus(); }, 100);
+}
+function closeNameModal() {
+  document.getElementById('nameModal').style.display = 'none';
+}
+function saveBtnClick() {
+  const val = document.getElementById('nameInput').value.trim();
+  if (!val) { toast('⚠️', 'Vui lòng nhập tên!'); return; }
+  saveName(val);
+  applyName(val);
+  closeNameModal();
+  toast('✅', 'Đã lưu tên: ' + val);
+}
+
+document.getElementById('nameSaveBtn').addEventListener('click', saveBtnClick);
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') saveBtnClick();
+});
+document.getElementById('userChip').addEventListener('click', openNameModal);
+document.getElementById('nameModal').addEventListener('click', function(e) {
+  if (e.target === this) closeNameModal();
+});
+
+// Init name
+const savedName = loadName();
+if (savedName) {
+  applyName(savedName);
+  closeNameModal();
+} else {
+  document.getElementById('nameModal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('nameInput').focus(); }, 200);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+updateDOW();
+render();
+
+})(); // end IIFE
+</script>
+</body>
+</html>
